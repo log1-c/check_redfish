@@ -140,7 +140,7 @@ def get_single_chassi_power(plugin_object, redfish_url):
 
     else:
         default_text = "No power supplies detected"
-        plugin_object.inventory.add_issue(PowerSupply, f"No power supply data returned for API URL '{redfish_url}'")
+        # plugin_object.inventory.add_issue(PowerSupply, f"No power supply data returned for API URL '{redfish_url}'")
 
     # get PowerRedundancy status
     power_redundancies = power_data.get("PowerRedundancy") or power_data.get("Redundancy")
@@ -237,6 +237,19 @@ def get_single_chassi_power(plugin_object, redfish_url):
                                                     location=f"Chassi {chassi_id}")
                     except Exception:
                         pass
+
+    if plugin_object.rf.vendor == "Supermicro":
+        battery = grab(power_data, f"Oem.{plugin_object.rf.vendor_dict_key}.Battery")
+        if battery is not None:
+            battery_status = get_status_data(grab(battery, "Status"))
+            status = battery_status.get("Health")
+            state = battery_status.get("State")
+            name = battery.get("Name")
+
+            status_text = f"{name} status: {status}/{state}"
+
+            plugin_object.add_output_data("CRITICAL" if status not in ["OK", "WARNING"] else status,
+                                          status_text, location=f"Chassi {chassi_id}")
 
     plugin_object.add_output_data("OK", default_text, summary=True, location=f"Chassi {chassi_id}")
 

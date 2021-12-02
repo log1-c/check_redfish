@@ -26,6 +26,12 @@ def discover_log_services(plugin_object, event_type, system_manager_id):
 
     if grab(log_services, "Members") is not None and len(log_services.get("Members")) > 0:
 
+        # return if we have only one log member and event type is part of system_manager_id
+        if event_type.lower() in system_manager_id.lower() and len(log_services.get("Members")) == 1:
+            log_service_data = plugin_object.rf.get(grab(log_services, "Members/0/@odata.id", separator="/"))
+
+            return grab(log_service_data, "Entries/@odata.id", separator="/")
+
         for log_service in log_services.get("Members"):
 
             log_service_data = plugin_object.rf.get(log_service.get("@odata.id"))
@@ -259,8 +265,11 @@ def get_event_log_generic(plugin_object, event_type, redfish_path):
     processed_ids = list()
 
     # reverse list from newest to oldest entry
-    if plugin_object.rf.vendor == "Lenovo":
+    if plugin_object.rf.vendor in ["Lenovo", "Supermicro"]:
         event_entries.reverse()
+
+#    if plugin_object.rf.vendor == "Supermicro":
+#        log_entries = sorted(log_entries, key=lambda i: i['Created'], reverse=True)
 
     for event_entry_item in event_entries:
 
